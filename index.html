@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Artifact Analysis Station</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+  :root {
+    --ground: #EEF1EF;
+    --surface: #F8FAF9;
+    --plate: #E2E7E4;
+    --grid: rgba(24, 40, 36, 0.06);
+    --ink: #17201E;
+    --ink-2: #47554F;
+    --ink-3: #75837E;
+    --line: #D0D8D4;
+    --accent: #2A7564;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DAEBE5;
+    --seg-capture: #9AA8A3;
+    --seg-vision: #7DB3A4;
+    --seg-generate: #2A7564;
+    --num: #9A4E2A;
+    --code-bg: #E7ECE9;
+    --ok: #2E7A4C;
+    --warn: #A4700F;
+    --crit: #B03C2C;
+    --specimen-edge: rgba(0, 0, 0, 0.22);
+    --shadow: rgba(20, 30, 28, 0.16);
+    --serif: "Instrument Serif", "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0F1413;
+      --surface: #161D1B;
+      --plate: #1B2321;
+      --grid: rgba(220, 240, 232, 0.05);
+      --ink: #E2E9E6;
+      --ink-2: #A9B6B1;
+      --ink-3: #7B8A85;
+      --line: #2A3532;
+      --accent: #63BCA6;
+      --accent-ink: #0C1714;
+      --accent-soft: #1C332D;
+      --seg-capture: #55635E;
+      --seg-vision: #3E7C6D;
+      --seg-generate: #63BCA6;
+      --num: #E39A72;
+      --code-bg: #121917;
+      --ok: #5DBF83;
+      --warn: #E0B04F;
+      --crit: #EE7A66;
+      --specimen-edge: rgba(0, 0, 0, 0.45);
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0F1413;
+    --surface: #161D1B;
+    --plate: #1B2321;
+    --grid: rgba(220, 240, 232, 0.05);
+    --ink: #E2E9E6;
+    --ink-2: #A9B6B1;
+    --ink-3: #7B8A85;
+    --line: #2A3532;
+    --accent: #63BCA6;
+    --accent-ink: #0C1714;
+    --accent-soft: #1C332D;
+    --seg-capture: #55635E;
+    --seg-vision: #3E7C6D;
+    --seg-generate: #63BCA6;
+    --num: #E39A72;
+    --code-bg: #121917;
+    --ok: #5DBF83;
+    --warn: #E0B04F;
+    --crit: #EE7A66;
+    --specimen-edge: rgba(0, 0, 0, 0.45);
+    --shadow: rgba(0, 0, 0, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.55 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- top bar ---------- */
+  .bar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    background: var(--ground);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand svg { flex: none; color: var(--accent); }
+  .brand b { font-weight: 600; letter-spacing: 0.01em; }
+  .brand span { color: var(--ink-3); font-size: 13px; }
+  .conn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 12px/1 var(--mono);
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-2);
+    background: var(--surface);
+  }
+  .conn i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
+  .conn[data-state="live"] i { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+  .conn[data-state="lost"] i { background: var(--crit); }
+
+  /* ---------- layout ---------- */
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 28px 56px;
+    display: grid;
+    gap: 28px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 36px;
+    align-items: start;
+  }
+  .lower {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .grid, .lower { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding-inline: 16px; }
+    .bar { padding-inline: 16px; }
+  }
+
+  .eyebrow {
+    font: 500 11px/1.2 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+  }
+  h2 {
+    margin: 0;
+    font: 600 13px/1.3 var(--sans);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+  }
+
+  /* ---------- specimen plate ---------- */
+  figure { margin: 0; display: grid; gap: 14px; }
+  .plate {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    max-width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--plate);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: center;
+    display: grid;
+    place-items: center;
+  }
+  .plate svg.specimen { width: 62%; height: auto; max-height: 86%; }
+  .plate img { width: 100%; height: 100%; object-fit: contain; }
+  .crop { position: absolute; width: 16px; height: 16px; border-color: var(--ink-3); border-style: solid; border-width: 0; }
+  .crop.tl { top: 12px; left: 12px; border-top-width: 1.5px; border-left-width: 1.5px; }
+  .crop.tr { top: 12px; right: 12px; border-top-width: 1.5px; border-right-width: 1.5px; }
+  .crop.bl { bottom: 12px; left: 12px; border-bottom-width: 1.5px; border-left-width: 1.5px; }
+  .crop.br { bottom: 12px; right: 12px; border-bottom-width: 1.5px; border-right-width: 1.5px; }
+  .plate-id { position: absolute; top: 14px; left: 36px; font: 500 11px/1 var(--mono); color: var(--ink-2); letter-spacing: 0.04em; }
+  .plate-frame { position: absolute; top: 14px; right: 36px; font: 11px/1 var(--mono); color: var(--ink-3); }
+  .scale { position: absolute; left: 36px; bottom: 16px; display: grid; gap: 4px; font: 11px/1 var(--mono); color: var(--ink-2); }
+  .scale i {
+    display: block; width: 72px; height: 6px;
+    border: 1.5px solid var(--ink-2); border-top: 0;
+    background: linear-gradient(90deg, var(--ink-2) 50%, transparent 50%) 0 100% / 36px 2px no-repeat;
+  }
+  .scanning .plate::after {
+    content: "";
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: scan 1.1s ease-in-out infinite alternate;
+  }
+  @keyframes scan { from { top: 8%; } to { top: 92%; } }
+
+  .meta { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .meta div { display: grid; gap: 3px; min-width: 0; }
+  .meta dt { font: 500 10.5px/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); }
+  .meta dd { margin: 0; font: 13px/1.35 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+
+  /* ---------- record ---------- */
+  .record { display: grid; gap: 18px; min-width: 0; }
+  .record-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .accession { font: 500 14px/1 var(--mono); letter-spacing: 0.04em; }
+  .gen-state {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 11.5px/1 var(--mono);
+    padding: 5px 9px;
+    border-radius: 3px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-left: auto;
+  }
+  .gen-state[data-busy="true"] { background: transparent; border: 1px dashed var(--accent); }
+  h1 {
+    margin: 0;
+    font: 400 clamp(2rem, 1.3rem + 2.4vw, 3.2rem)/1.04 var(--serif);
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+    min-height: 1.04em;
+  }
+  .caret {
+    display: inline-block; width: 0.42em; height: 0.82em;
+    margin-left: 2px; vertical-align: -0.06em;
+    background: var(--accent);
+    animation: blink 0.9s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .summary { margin: 0; max-width: 62ch; color: var(--ink-2); font-size: 15.5px; }
+  .ai-note { font: 12px/1.4 var(--mono); color: var(--ink-3); }
+  .ai-note em { font-style: normal; color: var(--accent); }
+
+  .tags { display: grid; border-top: 1px solid var(--line); }
+  .tag-row {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 12px;
+    padding-block: 11px;
+    border-bottom: 1px solid var(--line);
+    align-items: start;
+  }
+  .tag-row > .eyebrow { padding-top: 7px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 6px 10px 5px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--surface);
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .chip .sc { font: 11.5px/1 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .chip .meter { grid-column: 1 / -1; height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
+  .chip .meter b { display: block; height: 100%; width: var(--s); background: var(--accent); }
+  .chip.tentative { border-style: dashed; color: var(--ink-2); background: transparent; }
+  .chip.tentative .meter b { background: var(--ink-3); }
+  .chip.enter { animation: rise 0.36s ease-out both; }
+  @keyframes rise { from { opacity: 0.15; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 480px) {
+    .tag-row { grid-template-columns: 1fr; gap: 6px; }
+    .tag-row > .eyebrow { padding-top: 0; }
+    .meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .legend-note { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .btn {
+    padding: 9px 16px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--ink-3); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: 0.55; cursor: progress; }
+  .toast { font: 12.5px/1 var(--mono); color: var(--ink-3); }
+
+  /* ---------- device ---------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 20px 22px 22px;
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+  }
+  .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+  .model-line { font: 12.5px/1.4 var(--mono); color: var(--ink-3); }
+  .pipeline { display: grid; gap: 10px; }
+  .pipe-bar { display: flex; height: 12px; border-radius: 2px; overflow: hidden; gap: 2px; }
+  .pipe-bar span { display: block; height: 100%; min-width: 6px; }
+  .pipe-legend { display: flex; flex-wrap: wrap; gap: 6px 22px; font: 12.5px/1.3 var(--mono); color: var(--ink-2); }
+  .pipe-legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .pipe-legend i { width: 10px; height: 10px; border-radius: 2px; }
+  .pipe-legend b { font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .stat { background: var(--surface); padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+  .stat .v { font: 500 21px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 3px; }
+  .stat .sub { font-size: 12.5px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+  .mem { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+  .mem b { display: block; height: 100%; background: var(--accent); }
+  .mem.warn b { background: var(--warn); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+  .dot.warn { background: var(--warn); }
+  .dot.crit { background: var(--crit); }
+
+  /* ---------- log ---------- */
+  .log { list-style: none; margin: 0; padding: 0; display: grid; }
+  .log li + li { border-top: 1px solid var(--line); }
+  .log button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    text-align: left;
+    padding: 10px 8px;
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .log button:hover { background: var(--accent-soft); }
+  .log button[aria-current="true"] { background: var(--accent-soft); }
+  .log .thumb { width: 40px; height: 40px; border-radius: 3px; background: var(--plate); display: grid; place-items: center; overflow: hidden; }
+  .log .thumb svg, .log .thumb img { width: 80%; height: 80%; object-fit: contain; }
+  .log .t { font-size: 14px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log .m { font: 11.5px/1.3 var(--mono); color: var(--ink-3); }
+  .log .time { font: 11.5px/1.3 var(--mono); color: var(--ink-3); text-align: right; white-space: nowrap; }
+
+  /* ---------- payload ---------- */
+  .payload {
+    margin: 0;
+    padding: 14px 16px;
+    background: var(--code-bg);
+    border-radius: 6px;
+    font: 12.5px/1.6 var(--mono);
+    color: var(--ink-2);
+    overflow: auto;
+    max-height: 420px;
+    white-space: pre;
+  }
+  .payload .k { color: var(--accent); cursor: help; border-radius: 2px; }
+  .payload .k:hover, .payload .k:focus-visible { background: var(--accent-soft); outline: none; }
+  .payload .s { color: var(--ink); }
+  .payload .n { color: var(--num); }
+  .payload .b { color: var(--num); font-style: italic; }
+  .hint { margin: 0; font-size: 13px; color: var(--ink-3); }
+  .is-bound { outline: 2px solid var(--accent) !important; outline-offset: 4px; border-radius: 4px; transition: outline-offset 0.15s; }
+
+  details { border-top: 1px solid var(--line); padding-top: 12px; }
+  summary { cursor: pointer; font-weight: 500; font-size: 14px; }
+  .test { display: grid; gap: 10px; margin-top: 12px; }
+  textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--ground);
+    color: var(--ink);
+    font: 12.5px/1.5 var(--mono);
+  }
+  .err { margin: 0; font: 12.5px/1.4 var(--mono); color: var(--crit); }
+
+  footer.notes {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    display: flex; flex-wrap: wrap; gap: 6px 24px;
+    font: 12px/1.5 var(--mono);
+    color: var(--ink-3);
+  }
+  footer.notes code { color: var(--ink-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5"></circle>
+      <path d="M15.5 15.5 21 21M10.5 6.5v8M6.5 10.5h8"></path>
+    </svg>
+    <b>Artifact Analysis Station</b>
+    <span>IRO 2026</span>
+  </div>
+  <div class="conn" id="conn" data-state="demo" role="status"><i></i><span id="connText">Demo data · device not found</span></div>
+</header>
+
+<main class="wrap">
+  <section class="grid" id="stage">
+    <figure>
+      <div class="plate" data-bind="image">
+        <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
+        <span class="plate-id" id="plateId" data-bind="id">—</span>
+        <span class="plate-frame">800 × 600 JPEG</span>
+        <div id="specimenHost"></div>
+        <div class="scale"><i></i>5 cm</div>
+      </div>
+      <figcaption>
+        <dl class="meta">
+          <div data-bind="captured_at"><dt>Captured</dt><dd id="metaTime">—</dd></div>
+          <div><dt>Camera</dt><dd>OV2640 · fixed focus</dd></div>
+          <div data-bind="device"><dt>Unit</dt><dd id="metaUnit">—</dd></div>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <article class="record" aria-live="polite">
+      <div class="record-head">
+        <span class="eyebrow">Accession no.</span>
+        <span class="accession" id="accession" data-bind="id">—</span>
+        <span class="gen-state" id="genState">Generated on-device</span>
+      </div>
+      <h1 id="title" data-bind="title">—</h1>
+      <p class="summary" id="summary" data-bind="summary"></p>
+      <div class="ai-note">Title, summary and tags written by <em id="modelName">the on-board model</em>. Verify before cataloguing.</div>
+      <div class="tags" id="tags" data-bind="tags"></div>
+      <p class="legend-note">Bar and figure show model confidence (0–1). Dashed tags fall below 0.50 and are tentative.</p>
+      <div class="actions">
+        <button class="btn primary" id="analyseBtn" type="button">Analyse again</button>
+        <button class="btn" id="copyBtn" type="button">Copy record JSON</button>
+        <span class="toast" id="toast" role="status"></span>
+      </div>
+    </article>
+  </section>
+
+  <section class="panel" aria-labelledby="devH">
+    <div class="panel-head">
+      <h2 id="devH">On-device inference</h2>
+      <span class="model-line" id="modelLine" data-bind="model">—</span>
+    </div>
+    <div class="pipeline" data-bind="stages">
+      <div class="pipe-bar" id="pipeBar" role="img" aria-label="Pipeline timing"></div>
+      <div class="pipe-legend" id="pipeLegend"></div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="lower">
+    <div class="panel">
+      <div class="panel-head"><h2>Analysis log</h2><span class="model-line" id="logCount"></span></div>
+      <ol class="log" id="log"></ol>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Payload → page</h2><span class="model-line">GET /api/latest</span></div>
+      <p class="hint">This is the JSON the ESP32-S3 sent. Hover or focus a key to see where it appears on the page.</p>
+      <pre class="payload" id="payload"></pre>
+      <details>
+        <summary>Render a test payload</summary>
+        <div class="test">
+          <label class="hint" for="testInput">Paste a payload in the same shape. Tags may be objects or plain strings.</label>
+          <textarea id="testInput" spellcheck="false">{
+  "id": "IRO-2026-0200",
+  "title": "Gilt Bronze Seated Buddha Figure",
+  "summary": "Small cast figure seated in meditation on a lotus throne, with traces of gilding.",
+  "tags": [
+    {"label": "Ming dynasty", "category": "period", "score": 0.58},
+    {"label": "Gilt bronze", "category": "material", "score": 0.9},
+    "Lotus throne"
+  ]
+}</textarea>
+          <div class="actions"><button class="btn" id="testBtn" type="button">Render payload</button></div>
+          <p class="err" id="testErr" hidden></p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <footer class="notes">
+    <span>Served from the ESP32-S3 at <code>/</code></span>
+    <span>Polls <code>GET /api/latest</code></span>
+    <span>Triggers <code>POST /api/analyse</code></span>
+    <span>Streams tokens over <code>WS /ws</code></span>
+    <span>Firmware hook: <code>window.renderAnalysis(json)</code></span>
+  </footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const API = { latest: "/api/latest", analyse: "/api/analyse", ws: "/ws" };
+  const POLL_MS = 2500;
+  const CATEGORY_ORDER = ["period", "origin", "material", "technique", "motif", "function", "condition"];
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- specimen silhouettes (demo only; live mode shows the captured JPEG) ---------- */
+  const SHAPES = {
+    ding: {
+      body: '<path d="M58 76V44h18v32h-6V50h-6v26z"/><path d="M124 76V44h18v32h-6V50h-6v26z"/><path d="M44 74h112v10H44z"/><path d="M50 84h100q0 52-50 56-50-4-50-56z"/><path d="M64 124l10 6-4 46h-8z"/><path d="M96 138h8v42h-8z"/><path d="M136 124l-10 6 4 46h8z"/>',
+      detail: '<g fill="currentColor" opacity=".55"><rect x="56" y="90" width="6" height="12"/><rect x="68" y="90" width="6" height="12"/><rect x="80" y="90" width="6" height="12"/><rect x="92" y="90" width="16" height="12"/><rect x="114" y="90" width="6" height="12"/><rect x="126" y="90" width="6" height="12"/><rect x="138" y="90" width="6" height="12"/></g>'
+    },
+    bowl: {
+      body: '<path d="M28 86h144q-4 48-48 62H76q-44-14-48-62z"/><path d="M80 148h40l-4 12H84z"/>',
+      detail: '<g fill="none" stroke="currentColor" stroke-width="1.6" opacity=".6"><path d="M48 90q8 30 30 52"/><path d="M76 90q4 30 14 56"/><path d="M100 90v58"/><path d="M124 90q-4 30-14 56"/><path d="M152 90q-8 30-30 52"/></g>'
+    },
+    bi: {
+      body: '<path fill-rule="evenodd" d="M100 32a68 68 0 1 1-.01 0zM100 80a20 20 0 1 0 .01 0z"/>',
+      detail: '<g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"><circle cx="100" cy="100" r="44"/><path d="M60 70q10-6 16 2M128 136q10 2 12-8"/></g>'
+    },
+    meiping: {
+      body: '<path d="M90 30h20v10q0 6 8 10 32 12 30 52-2 40-26 70H78q-24-30-26-70-2-40 30-52 8-4 8-10z"/>',
+      detail: '<g fill="none" stroke="currentColor" stroke-width="2.2" opacity=".9"><path d="M60 82q20-12 40 0t40 0"/><path d="M58 110q14 18 28 4t28 0 28-4"/><circle cx="86" cy="122" r="6"/><circle cx="118" cy="120" r="6"/><path d="M66 150q34 10 68 0"/></g>'
+    }
+  };
+
+  function specimenSVG(glyph, hue, detail, cls) {
+    const s = SHAPES[glyph] || SHAPES.ding;
+    const gid = "sheen-" + Math.random().toString(36).slice(2, 8);
+    return `<svg class="${cls || "specimen"}" viewBox="0 0 200 200" aria-hidden="true">
+      <defs><linearGradient id="${gid}" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/>
+        <stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient></defs>
+      <ellipse cx="100" cy="184" rx="62" ry="6" fill="var(--shadow)"/>
+      <g fill="${hue}" stroke="var(--specimen-edge)" stroke-width="1">${s.body}</g>
+      <g fill="url(#${gid})">${s.body}</g>
+      <g color="${detail}">${s.detail}</g>
+    </svg>`;
+  }
+
+  /* ---------- sample payloads (shown only when no device answers) ---------- */
+  const SAMPLES = [
+    {
+      glyph: "ding", hue: "#4E806B", detail: "#1D3A30",
+      payload: {
+        id: "IRO-2026-0147",
+        captured_at: "2026-10-08T10:42:13+08:00",
+        title: "Bronze Ritual Tripod Cauldron with Taotie Mask Frieze",
+        summary: "Cast bronze ding with two upright loop handles and three columnar legs. A band of taotie masks circles the upper body; green malachite patina covers most surfaces.",
+        tags: [
+          { label: "Late Shang", category: "period", score: 0.81 },
+          { label: "Bronze", category: "material", score: 0.97 },
+          { label: "Malachite patina", category: "material", score: 0.74 },
+          { label: "Piece-mould casting", category: "technique", score: 0.69 },
+          { label: "Taotie mask", category: "motif", score: 0.88 },
+          { label: "Cloud-and-thunder ground", category: "motif", score: 0.47 },
+          { label: "Ritual vessel", category: "function", score: 0.92 },
+          { label: "Surface corrosion", category: "condition", score: 0.66 }
+        ],
+        model: { name: "RelicLM-15M", quant: "int8", tokens: 41, tok_s: 9.4, latency_ms: 4362 },
+        stages: { capture: 64, vision: 182, generate: 4362 },
+        device: { chip: "ESP32-S3", cpu_mhz: 240, psram_used_kb: 6210, psram_total_kb: 8192, temp_c: 47.2, rssi_dbm: -61 }
+      }
+    },
+    {
+      glyph: "bowl", hue: "#8FBAA6", detail: "#567F6C",
+      payload: {
+        id: "IRO-2026-0146",
+        captured_at: "2026-10-08T10:31:52+08:00",
+        title: "Longquan Celadon Lotus-Petal Bowl with Crackled Glaze",
+        summary: "Deep stoneware bowl on a short foot ring. The exterior is carved with overlapping lotus petals under a thick blue-green glaze showing fine crackle.",
+        tags: [
+          { label: "Southern Song", category: "period", score: 0.76 },
+          { label: "Longquan kilns", category: "origin", score: 0.71 },
+          { label: "Stoneware", category: "material", score: 0.9 },
+          { label: "Celadon glaze", category: "material", score: 0.95 },
+          { label: "Carved relief", category: "technique", score: 0.71 },
+          { label: "Lotus petals", category: "motif", score: 0.89 },
+          { label: "Tableware", category: "function", score: 0.64 },
+          { label: "Fine crackle", category: "condition", score: 0.58 },
+          { label: "Rim chip", category: "condition", score: 0.42 }
+        ],
+        model: { name: "RelicLM-15M", quant: "int8", tokens: 44, tok_s: 9.1, latency_ms: 4835 },
+        stages: { capture: 61, vision: 179, generate: 4835 },
+        device: { chip: "ESP32-S3", cpu_mhz: 240, psram_used_kb: 6188, psram_total_kb: 8192, temp_c: 46.1, rssi_dbm: -60 }
+      }
+    },
+    {
+      glyph: "bi", hue: "#A8B48E", detail: "#6D7856",
+      payload: {
+        id: "IRO-2026-0145",
+        captured_at: "2026-10-08T10:18:07+08:00",
+        title: "Neolithic Jade Bi Disc with Polished Plain Surface",
+        summary: "Flat nephrite disc with a central perforation drilled from both faces. Undecorated, with a soft polish and cream calcified patches near the outer edge.",
+        tags: [
+          { label: "Liangzhu culture", category: "period", score: 0.68 },
+          { label: "Nephrite jade", category: "material", score: 0.91 },
+          { label: "Abrasive drilling", category: "technique", score: 0.62 },
+          { label: "Undecorated", category: "motif", score: 0.77 },
+          { label: "Ritual / burial", category: "function", score: 0.83 },
+          { label: "Calcification", category: "condition", score: 0.71 }
+        ],
+        model: { name: "RelicLM-15M", quant: "int8", tokens: 37, tok_s: 9.6, latency_ms: 3854 },
+        stages: { capture: 66, vision: 176, generate: 3854 },
+        device: { chip: "ESP32-S3", cpu_mhz: 240, psram_used_kb: 6142, psram_total_kb: 8192, temp_c: 44.8, rssi_dbm: -63 }
+      }
+    },
+    {
+      glyph: "meiping", hue: "#E9EEF1", detail: "#2E4E8F",
+      payload: {
+        id: "IRO-2026-0144",
+        captured_at: "2026-10-08T10:05:44+08:00",
+        title: "Blue-and-White Meiping Vase with Scrolling Peony",
+        summary: "Porcelain vase with a small mouth, broad shoulder and tapering body, painted in underglaze cobalt with a band of peony scroll between narrower borders.",
+        tags: [
+          { label: "Yuan dynasty", category: "period", score: 0.63 },
+          { label: "Jingdezhen", category: "origin", score: 0.66 },
+          { label: "Porcelain", category: "material", score: 0.96 },
+          { label: "Cobalt underglaze", category: "material", score: 0.93 },
+          { label: "Peony scroll", category: "motif", score: 0.85 },
+          { label: "Lotus panels", category: "motif", score: 0.49 },
+          { label: "Wine storage", category: "function", score: 0.55 },
+          { label: "Intact", category: "condition", score: 0.79 }
+        ],
+        model: { name: "RelicLM-15M", quant: "int8", tokens: 40, tok_s: 9.3, latency_ms: 4301 },
+        stages: { capture: 63, vision: 184, generate: 4301 },
+        device: { chip: "ESP32-S3", cpu_mhz: 240, psram_used_kb: 6236, psram_total_kb: 8192, temp_c: 48.0, rssi_dbm: -59 }
+      }
+    }
+  ];
+
+  /* ---------- state ---------- */
+  const state = { mode: "demo", records: [], current: null, busy: false, demoCursor: 1, host: location.host };
+  let streamToken = 0;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const num = (v, d = 0) => (typeof v === "number" && isFinite(v) ? v.toFixed(d) : "—");
+
+  /* ---------- normalise whatever the firmware sends ---------- */
+  function normalize(raw, extra) {
+    const p = raw || {};
+    let tags = [];
+    if (Array.isArray(p.tags)) {
+      tags = p.tags.map((t) => typeof t === "string"
+        ? { label: t, category: "other", score: null }
+        : { label: String(t.label ?? t.name ?? t.tag ?? ""), category: String(t.category ?? t.type ?? "other").toLowerCase(), score: typeof t.score === "number" ? t.score : (typeof t.confidence === "number" ? t.confidence : null) });
+    } else if (p.tags && typeof p.tags === "object") {
+      for (const [cat, list] of Object.entries(p.tags)) {
+        [].concat(list).forEach((l) => tags.push({ label: String(l), category: cat.toLowerCase(), score: null }));
+      }
+    }
+    tags = tags.filter((t) => t.label);
+    return {
+      raw: p,
+      id: p.id || "IRO-UNSAVED",
+      captured_at: p.captured_at || new Date().toISOString(),
+      image: p.image || null,
+      title: p.title || "Untitled object",
+      summary: p.summary || "",
+      tags,
+      model: p.model || {},
+      stages: p.stages || null,
+      device: p.device || {},
+      glyph: extra?.glyph || null,
+      hue: extra?.hue || "#7D8F88",
+      detail: extra?.detail || "#3F4D48"
+    };
+  }
+
+  /* ---------- rendering ---------- */
+  function fmtTime(iso, short) {
+    const d = new Date(iso);
+    if (isNaN(d)) return "—";
+    return short
+      ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      : d.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function visual(rec, cls) {
+    if (rec.image) return `<img src="${esc(rec.image)}" alt="Captured photograph of ${esc(rec.title)}">`;
+    return specimenSVG(rec.glyph || "ding", rec.hue, rec.detail, cls);
+  }
+
+  function renderTags(rec, animate) {
+    const groups = new Map();
+    rec.tags.forEach((t) => {
+      if (!groups.has(t.category)) groups.set(t.category, []);
+      groups.get(t.category).push(t);
+    });
+    const cats = [...groups.keys()].sort((a, b) => {
+      const ia = CATEGORY_ORDER.indexOf(a), ib = CATEGORY_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    let i = 0;
+    $("tags").innerHTML = cats.map((c) => `
+      <div class="tag-row">
+        <span class="eyebrow">${esc(cap(c))}</span>
+        <div class="chips">${groups.get(c).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((t) => {
+          const has = typeof t.score === "number";
+          const tentative = has && t.score < 0.5;
+          const delay = animate ? `animation-delay:${(i++) * 90}ms;` : "";
+          return `<span class="chip${tentative ? " tentative" : ""}${animate ? " enter" : ""}" style="${delay}--s:${has ? Math.round(t.score * 100) : 0}%">
+              <span>${esc(t.label)}</span>${has ? `<span class="sc">${t.score.toFixed(2)}</span><span class="meter"><b></b></span>` : ""}
+            </span>`;
+        }).join("")}</div>
+      </div>`).join("") || `<div class="tag-row"><span class="eyebrow">Tags</span><span class="hint">No tags returned.</span></div>`;
+  }
+
+  function renderDevice(rec) {
+    const m = rec.model, d = rec.device;
+    $("modelName").textContent = m.name ? `${m.name}${m.quant ? " (" + m.quant + ")" : ""}` : "the on-board model";
+    $("modelLine").textContent = [m.name, m.quant, d.chip && `${d.chip}${d.cpu_mhz ? " @ " + d.cpu_mhz + " MHz" : ""}`].filter(Boolean).join(" · ") || "—";
+    $("metaUnit").textContent = d.chip ? `${d.chip}${d.psram_total_kb ? " · " + Math.round(d.psram_total_kb / 1024) + " MB PSRAM" : ""}` : "—";
+
+    const st = rec.stages || (m.latency_ms ? { generate: m.latency_ms } : null);
+    const segColor = { capture: "var(--seg-capture)", vision: "var(--seg-vision)", generate: "var(--seg-generate)" };
+    const segName = { capture: "Capture", vision: "Vision encoder", generate: "LLM generation" };
+    if (st) {
+      const entries = Object.entries(st).filter(([, v]) => typeof v === "number");
+      const total = entries.reduce((a, [, v]) => a + v, 0) || 1;
+      $("pipeBar").innerHTML = entries.map(([k, v]) => `<span style="flex:${v} 1 0;background:${segColor[k] || "var(--ink-3)"}" title="${esc(segName[k] || k)}: ${v} ms"></span>`).join("");
+      $("pipeLegend").innerHTML = entries.map(([k, v]) => `<span><i style="background:${segColor[k] || "var(--ink-3)"}"></i>${esc(segName[k] || cap(k))} <b>${v.toLocaleString("en-GB")} ms</b></span>`).join("")
+        + `<span>Total <b>${(total / 1000).toFixed(2)} s</b></span>`;
+    } else {
+      $("pipeBar").innerHTML = "";
+      $("pipeLegend").innerHTML = `<span>No stage timing in payload</span>`;
+    }
+
+    const memPct = d.psram_used_kb && d.psram_total_kb ? d.psram_used_kb / d.psram_total_kb : null;
+    const temp = d.temp_c;
+    const tState = temp == null ? "" : temp >= 75 ? "crit" : temp >= 60 ? "warn" : "";
+    const tWord = temp == null ? "" : temp >= 75 ? "Throttling likely" : temp >= 60 ? "Running warm" : "Normal";
+    const rssi = d.rssi_dbm;
+    const rState = rssi == null ? "" : rssi >= -65 ? "" : rssi >= -75 ? "warn" : "crit";
+    const rWord = rssi == null ? "" : rssi >= -65 ? "Strong" : rssi >= -75 ? "Fair" : "Weak";
+
+    $("stats").innerHTML = `
+      <div class="stat" data-bind="model"><span class="eyebrow">Generation time</span><span class="v">${num(m.latency_ms / 1000, 2)}<small>s</small></span><span class="sub">title + summary + tags</span></div>
+      <div class="stat" data-bind="model"><span class="eyebrow">Throughput</span><span class="v">${num(m.tok_s, 1)}<small>tok/s</small></span><span class="sub">${num(m.tokens)} tokens out</span></div>
+      <div class="stat" data-bind="device"><span class="eyebrow">PSRAM</span><span class="v">${memPct == null ? "—" : num(d.psram_used_kb / 1024, 1)}<small>/ ${num((d.psram_total_kb || 0) / 1024, 0)} MB</small></span>
+        <div class="mem${memPct > 0.9 ? " warn" : ""}"><b style="width:${memPct == null ? 0 : Math.round(memPct * 100)}%"></b></div></div>
+      <div class="stat" data-bind="device"><span class="eyebrow">Chip temperature</span><span class="v">${num(temp, 1)}<small>°C</small></span><span class="sub">${tWord ? `<i class="dot ${tState}"></i>${tWord}` : ""}</span></div>
+      <div class="stat" data-bind="device"><span class="eyebrow">Wi-Fi signal</span><span class="v">${num(rssi)}<small>dBm</small></span><span class="sub">${rWord ? `<i class="dot ${rState}"></i>${rWord}` : ""}</span></div>`;
+  }
+
+  function jsonHTML(v, ind, top) {
+    const pad = "  ".repeat(ind);
+    if (Array.isArray(v)) {
+      if (!v.length) return "[]";
+      return "[\n" + v.map((x) => pad + "  " + jsonHTML(x, ind + 1, top)).join(",\n") + "\n" + pad + "]";
+    }
+    if (v && typeof v === "object") {
+      const ks = Object.keys(v);
+      if (!ks.length) return "{}";
+      const flat = top != null && ks.every((k) => v[k] === null || typeof v[k] !== "object") && JSON.stringify(v).length < 72;
+      const parts = ks.map((k) => {
+        const t = top ?? k;
+        const tab = top == null ? ' tabindex="0"' : "";
+        return `<span class="k" data-key="${esc(t)}"${tab}>"${esc(k)}"</span>: ` + jsonHTML(v[k], ind + 1, t);
+      });
+      return flat ? "{ " + parts.join(", ") + " }" : "{\n" + parts.map((p) => pad + "  " + p).join(",\n") + "\n" + pad + "}";
+    }
+    if (typeof v === "string") return `<span class="s">"${esc(v)}"</span>`;
+    if (typeof v === "number") return `<span class="n">${v}</span>`;
+    return `<span class="b">${v}</span>`;
+  }
+
+  function renderLog() {
+    $("logCount").textContent = `${state.records.length} record${state.records.length === 1 ? "" : "s"} this session`;
+    $("log").innerHTML = state.records.map((r, idx) => `
+      <li><button type="button" data-idx="${idx}" aria-current="${r === state.current}"${r === state.current ? ' data-bind="id"' : ""}>
+        <span class="thumb">${visual(r, "mini")}</span>
+        <span style="min-width:0"><span class="t" style="display:block">${esc(r.title)}</span><span class="m">${esc(r.id)} · ${r.tags.length} tags</span></span>
+        <span class="time">${fmtTime(r.captured_at, true)}</span>
+      </button></li>`).join("");
+  }
+
+  function renderStatic(rec) {
+    $("specimenHost").innerHTML = visual(rec);
+    $("plateId").textContent = rec.id;
+    $("accession").textContent = rec.id;
+    $("metaTime").textContent = fmtTime(rec.captured_at);
+    $("payload").innerHTML = jsonHTML(rec.raw, 0, null);
+    renderDevice(rec);
+  }
+
+  function setGen(text, busy) {
+    const g = $("genState");
+    g.textContent = text;
+    g.dataset.busy = busy ? "true" : "false";
+  }
+
+  function show(rec, opts = {}) {
+    state.current = rec;
+    const my = ++streamToken;
+    renderStatic(rec);
+    renderLog();
+
+    if (!opts.stream || reduceMotion) {
+      $("title").textContent = rec.title;
+      $("summary").textContent = rec.summary;
+      renderTags(rec, false);
+      setGen("Generated on-device", false);
+      setBusy(false);
+      return;
+    }
+
+    // Replay generation: the title arrives token by token at the model's measured speed.
+    $("summary").textContent = "";
+    $("tags").innerHTML = "";
+    const words = rec.title.match(/\S+\s*/g) || [];
+    const step = Math.max(70, Math.min(260, 1000 / (rec.model.tok_s || 8)));
+    let i = 0;
+    $("title").innerHTML = '<span class="caret"></span>';
+    const tick = () => {
+      if (my !== streamToken) return;
+      if (i < words.length) {
+        i++;
+        $("title").innerHTML = esc(words.slice(0, i).join("")) + '<span class="caret"></span>';
+        setGen(`Generating title · ${i}/${words.length}`, true);
+        setTimeout(tick, step);
+      } else {
+        $("title").textContent = rec.title;
+        $("summary").textContent = rec.summary;
+        setGen("Generating tags…", true);
+        renderTags(rec, true);
+        setTimeout(() => {
+          if (my !== streamToken) return;
+          setGen("Generated on-device", false);
+          setBusy(false);
+        }, rec.tags.length * 90 + 300);
+      }
+    };
+    tick();
+  }
+
+  function setBusy(b) {
+    state.busy = b;
+    $("analyseBtn").disabled = b;
+    $("analyseBtn").textContent = b ? "Analysing…" : "Analyse again";
+    if (!b) document.getElementById("stage").classList.remove("scanning");
+  }
+
+  function ingest(raw, opts = {}) {
+    const rec = normalize(raw, opts.extra);
+    const existing = state.records.findIndex((r) => r.id === rec.id);
+    if (existing >= 0) state.records.splice(existing, 1);
+    state.records.unshift(rec);
+    state.records = state.records.slice(0, 12);
+    show(rec, { stream: opts.stream });
+    return rec;
+  }
+
+  /* ---------- connection: live device first, demo fallback ---------- */
+  function setConn(mode, text) {
+    state.mode = mode;
+    $("conn").dataset.state = mode;
+    $("connText").textContent = text;
+  }
+
+  async function fetchLatest(timeout = 1500) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const r = await fetch(API.latest, { cache: "no-store", signal: ctrl.signal });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j && typeof j === "object" && j.title ? j : null;
+    } catch { return null; } finally { clearTimeout(t); }
+  }
+
+  function startPolling() {
+    let misses = 0;
+    setInterval(async () => {
+      if (state.busy && state.socket) return;
+      const j = await fetchLatest(2000);
+      if (!j) {
+        if (++misses >= 3) setConn("lost", "Connection lost · retrying");
+        return;
+      }
+      misses = 0;
+      if (state.mode !== "live") setConn("live", `Live · ${state.host}`);
+      if (!state.current || j.id !== state.current.id) ingest(j, { stream: false });
+    }, POLL_MS);
+  }
+
+  function openSocket() {
+    let ws;
+    try { ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + API.ws); }
+    catch { return; }
+    ws.onopen = () => { state.socket = ws; };
+    ws.onclose = () => { state.socket = null; setTimeout(openSocket, 4000); };
+    ws.onmessage = (ev) => {
+      let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+      if (msg.type === "status") {
+        setBusy(true);
+        setGen(msg.text || cap(String(msg.stage || "working")) + "…", true);
+      } else if (msg.type === "token" && (!msg.field || msg.field === "title")) {
+        streamToken++;
+        setBusy(true);
+        const cur = ($("title").dataset.live || "") + (msg.text || "");
+        $("title").dataset.live = cur;
+        $("title").innerHTML = esc(cur) + '<span class="caret"></span>';
+        setGen("Generating title…", true);
+      } else if (msg.type === "result" && msg.data) {
+        delete $("title").dataset.live;
+        ingest(msg.data, { stream: false });
+      }
+    };
+  }
+
+  /* ---------- actions ---------- */
+  $("analyseBtn").addEventListener("click", async () => {
+    if (state.busy) return;
+    setBusy(true);
+    if (state.mode === "live" || state.mode === "lost") {
+      setGen("Capturing…", true);
+      $("title").innerHTML = '<span class="caret"></span>';
+      try {
+        const r = await fetch(API.analyse, { method: "POST" });
+        if (!r.ok) throw new Error(r.status);
+        const j = await r.json().catch(() => null);
+        if (j && j.title) ingest(j, { stream: !state.socket });
+        // Otherwise the result arrives over the socket or the next poll.
+      } catch {
+        setGen("Device did not respond", false);
+        if (state.current) $("title").textContent = state.current.title;
+        setBusy(false);
+      }
+      return;
+    }
+    // Demo: run the next sample through the same pipeline display.
+    const s = SAMPLES[state.demoCursor % SAMPLES.length];
+    state.demoCursor++;
+    const maxId = Math.max(...state.records.map((r) => parseInt(r.id.split("-").pop(), 10) || 0));
+    const payload = JSON.parse(JSON.stringify(s.payload));
+    payload.id = "IRO-2026-" + String(maxId + 1).padStart(4, "0");
+    payload.captured_at = new Date().toISOString();
+    $("title").innerHTML = '<span class="caret"></span>';
+    $("summary").textContent = "";
+    $("tags").innerHTML = "";
+    $("specimenHost").innerHTML = specimenSVG(s.glyph, s.hue, s.detail);
+    document.getElementById("stage").classList.add("scanning");
+    const stages = [["Capturing frame…", payload.stages.capture * 4], ["Vision encoder…", payload.stages.vision * 3]];
+    for (const [label, ms] of stages) {
+      setGen(label, true);
+      await new Promise((res) => setTimeout(res, reduceMotion ? 0 : ms));
+    }
+    document.getElementById("stage").classList.remove("scanning");
+    ingest(payload, { stream: true, extra: s });
+  });
+
+  $("copyBtn").addEventListener("click", async () => {
+    if (!state.current) return;
+    const text = JSON.stringify(state.current.raw, null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+      flash("Copied record JSON");
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents($("payload"));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      flash("Selected below — press Ctrl+C to copy");
+    }
+  });
+
+  let toastTimer;
+  function flash(msg) {
+    $("toast").textContent = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").textContent = ""; }, 2600);
+  }
+
+  $("log").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-idx]");
+    if (!b) return;
+    show(state.records[+b.dataset.idx], { stream: false });
+  });
+
+  // Payload key → page element highlighting
+  const clearBound = () => document.querySelectorAll(".is-bound").forEach((el) => el.classList.remove("is-bound"));
+  const bindHL = (e) => {
+    const k = e.target.closest(".k");
+    if (!k) return;
+    clearBound();
+    document.querySelectorAll(`[data-bind="${CSS.escape(k.dataset.key)}"]`).forEach((el) => el.classList.add("is-bound"));
+  };
+  $("payload").addEventListener("mouseover", bindHL);
+  $("payload").addEventListener("focusin", bindHL);
+  $("payload").addEventListener("mouseleave", clearBound);
+  $("payload").addEventListener("focusout", clearBound);
+
+  $("testBtn").addEventListener("click", () => {
+    const err = $("testErr");
+    try {
+      const j = JSON.parse($("testInput").value);
+      if (!j || typeof j !== "object" || !j.title) throw new Error("Payload needs at least a \"title\" field.");
+      err.hidden = true;
+      ingest(j, { stream: true });
+      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    } catch (ex) {
+      err.textContent = ex instanceof SyntaxError ? "That isn't valid JSON: " + ex.message : ex.message;
+      err.hidden = false;
+    }
+  });
+
+  // Firmware / console hook
+  window.renderAnalysis = (json, stream = true) => ingest(typeof json === "string" ? JSON.parse(json) : json, { stream });
+
+  /* ---------- boot ---------- */
+  // Seed the page with sample records so it opens in a working state, then look for a device.
+  [...SAMPLES].reverse().forEach((s) => state.records.unshift(normalize(s.payload, s)));
+  show(state.records[0], { stream: false });
+
+  (async () => {
+    const live = await fetchLatest();
+    if (live) {
+      state.records = [];
+      setConn("live", `Live · ${state.host}`);
+      ingest(live, { stream: false });
+      startPolling();
+      openSocket();
+    } else {
+      setConn("demo", "Demo data · device not found");
+    }
+  })();
+})();
+</script>
+</body>
+</html>
