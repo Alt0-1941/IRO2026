@@ -7,414 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
-<style>
-  :root {
-    --ground: #EEF1EF;
-    --surface: #F8FAF9;
-    --plate: #E2E7E4;
-    --grid: rgba(24, 40, 36, 0.06);
-    --ink: #17201E;
-    --ink-2: #47554F;
-    --ink-3: #75837E;
-    --line: #D0D8D4;
-    --accent: #2A7564;
-    --accent-ink: #FFFFFF;
-    --accent-soft: #DAEBE5;
-    --seg-capture: #9AA8A3;
-    --seg-vision: #7DB3A4;
-    --seg-generate: #2A7564;
-    --num: #9A4E2A;
-    --code-bg: #E7ECE9;
-    --ok: #2E7A4C;
-    --warn: #A4700F;
-    --crit: #B03C2C;
-    --specimen-edge: rgba(0, 0, 0, 0.22);
-    --shadow: rgba(20, 30, 28, 0.16);
-    --serif: "Instrument Serif", "Iowan Old Style", Georgia, "Times New Roman", serif;
-    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --ground: #0F1413;
-      --surface: #161D1B;
-      --plate: #1B2321;
-      --grid: rgba(220, 240, 232, 0.05);
-      --ink: #E2E9E6;
-      --ink-2: #A9B6B1;
-      --ink-3: #7B8A85;
-      --line: #2A3532;
-      --accent: #63BCA6;
-      --accent-ink: #0C1714;
-      --accent-soft: #1C332D;
-      --seg-capture: #55635E;
-      --seg-vision: #3E7C6D;
-      --seg-generate: #63BCA6;
-      --num: #E39A72;
-      --code-bg: #121917;
-      --ok: #5DBF83;
-      --warn: #E0B04F;
-      --crit: #EE7A66;
-      --specimen-edge: rgba(0, 0, 0, 0.45);
-      --shadow: rgba(0, 0, 0, 0.45);
-    }
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --ground: #0F1413;
-    --surface: #161D1B;
-    --plate: #1B2321;
-    --grid: rgba(220, 240, 232, 0.05);
-    --ink: #E2E9E6;
-    --ink-2: #A9B6B1;
-    --ink-3: #7B8A85;
-    --line: #2A3532;
-    --accent: #63BCA6;
-    --accent-ink: #0C1714;
-    --accent-soft: #1C332D;
-    --seg-capture: #55635E;
-    --seg-vision: #3E7C6D;
-    --seg-generate: #63BCA6;
-    --num: #E39A72;
-    --code-bg: #121917;
-    --ok: #5DBF83;
-    --warn: #E0B04F;
-    --crit: #EE7A66;
-    --specimen-edge: rgba(0, 0, 0, 0.45);
-    --shadow: rgba(0, 0, 0, 0.45);
-  }
-
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--ground);
-    color: var(--ink);
-    font: 15px/1.55 var(--sans);
-    -webkit-font-smoothing: antialiased;
-  }
-  button { font: inherit; color: inherit; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  /* ---------- top bar ---------- */
-  .bar {
-    position: sticky;
-    top: env(safe-area-inset-top, 0px);
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 12px 20px;
-    background: var(--ground);
-    border-bottom: 1px solid var(--line);
-  }
-  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .brand svg { flex: none; color: var(--accent); }
-  .brand b { font-weight: 600; letter-spacing: 0.01em; }
-  .brand span { color: var(--ink-3); font-size: 13px; }
-  .conn {
-    display: inline-flex; align-items: center; gap: 8px;
-    font: 500 12px/1 var(--mono);
-    padding: 7px 10px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    color: var(--ink-2);
-    background: var(--surface);
-  }
-  .conn i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
-  .conn[data-state="live"] i { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
-  .conn[data-state="lost"] i { background: var(--crit); }
-
-  /* ---------- layout ---------- */
-  .wrap {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding-inline: 20px;
-    padding-block: 28px 56px;
-    display: grid;
-    gap: 28px;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    gap: 36px;
-    align-items: start;
-  }
-  .lower {
-    display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    gap: 28px;
-    align-items: start;
-  }
-  @media (max-width: 880px) {
-    .grid, .lower { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 480px) {
-    .wrap { padding-inline: 16px; }
-    .bar { padding-inline: 16px; }
-  }
-
-  .eyebrow {
-    font: 500 11px/1.2 var(--mono);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--ink-3);
-  }
-  h2 {
-    margin: 0;
-    font: 600 13px/1.3 var(--sans);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-2);
-  }
-
-  /* ---------- specimen plate ---------- */
-  figure { margin: 0; display: grid; gap: 14px; }
-  .plate {
-    position: relative;
-    aspect-ratio: 4 / 3;
-    max-width: 100%;
-    border-radius: 6px;
-    overflow: hidden;
-    background-color: var(--plate);
-    background-image:
-      linear-gradient(var(--grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-    background-size: 24px 24px;
-    background-position: center;
-    display: grid;
-    place-items: center;
-  }
-  .plate svg.specimen { width: 62%; height: auto; max-height: 86%; }
-  .plate img { width: 100%; height: 100%; object-fit: contain; }
-  .crop { position: absolute; width: 16px; height: 16px; border-color: var(--ink-3); border-style: solid; border-width: 0; }
-  .crop.tl { top: 12px; left: 12px; border-top-width: 1.5px; border-left-width: 1.5px; }
-  .crop.tr { top: 12px; right: 12px; border-top-width: 1.5px; border-right-width: 1.5px; }
-  .crop.bl { bottom: 12px; left: 12px; border-bottom-width: 1.5px; border-left-width: 1.5px; }
-  .crop.br { bottom: 12px; right: 12px; border-bottom-width: 1.5px; border-right-width: 1.5px; }
-  .plate-id { position: absolute; top: 14px; left: 36px; font: 500 11px/1 var(--mono); color: var(--ink-2); letter-spacing: 0.04em; }
-  .plate-frame { position: absolute; top: 14px; right: 36px; font: 11px/1 var(--mono); color: var(--ink-3); }
-  .scale { position: absolute; left: 36px; bottom: 16px; display: grid; gap: 4px; font: 11px/1 var(--mono); color: var(--ink-2); }
-  .scale i {
-    display: block; width: 72px; height: 6px;
-    border: 1.5px solid var(--ink-2); border-top: 0;
-    background: linear-gradient(90deg, var(--ink-2) 50%, transparent 50%) 0 100% / 36px 2px no-repeat;
-  }
-  .scanning .plate::after {
-    content: "";
-    position: absolute; left: 0; right: 0; height: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 12px var(--accent);
-    animation: scan 1.1s ease-in-out infinite alternate;
-  }
-  @keyframes scan { from { top: 8%; } to { top: 92%; } }
-
-  .meta { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-  .meta div { display: grid; gap: 3px; min-width: 0; }
-  .meta dt { font: 500 10.5px/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); }
-  .meta dd { margin: 0; font: 13px/1.35 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
-
-  /* ---------- record ---------- */
-  .record { display: grid; gap: 18px; min-width: 0; }
-  .record-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
-  .accession { font: 500 14px/1 var(--mono); letter-spacing: 0.04em; }
-  .gen-state {
-    display: inline-flex; align-items: center; gap: 6px;
-    font: 500 11.5px/1 var(--mono);
-    padding: 5px 9px;
-    border-radius: 3px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    margin-left: auto;
-  }
-  .gen-state[data-busy="true"] { background: transparent; border: 1px dashed var(--accent); }
-  h1 {
-    margin: 0;
-    font: 400 clamp(2rem, 1.3rem + 2.4vw, 3.2rem)/1.04 var(--serif);
-    letter-spacing: -0.005em;
-    text-wrap: balance;
-    min-height: 1.04em;
-  }
-  .caret {
-    display: inline-block; width: 0.42em; height: 0.82em;
-    margin-left: 2px; vertical-align: -0.06em;
-    background: var(--accent);
-    animation: blink 0.9s steps(1) infinite;
-  }
-  @keyframes blink { 50% { opacity: 0; } }
-  .summary { margin: 0; max-width: 62ch; color: var(--ink-2); font-size: 15.5px; }
-  .ai-note { font: 12px/1.4 var(--mono); color: var(--ink-3); }
-  .ai-note em { font-style: normal; color: var(--accent); }
-
-  .tags { display: grid; border-top: 1px solid var(--line); }
-  .tag-row {
-    display: grid;
-    grid-template-columns: 112px minmax(0, 1fr);
-    gap: 12px;
-    padding-block: 11px;
-    border-bottom: 1px solid var(--line);
-    align-items: start;
-  }
-  .tag-row > .eyebrow { padding-top: 7px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip {
-    display: inline-grid;
-    grid-template-columns: auto auto;
-    align-items: center;
-    column-gap: 10px;
-    row-gap: 4px;
-    padding: 6px 10px 5px;
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    background: var(--surface);
-    font-size: 14px;
-    line-height: 1.2;
-  }
-  .chip .sc { font: 11.5px/1 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
-  .chip .meter { grid-column: 1 / -1; height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
-  .chip .meter b { display: block; height: 100%; width: var(--s); background: var(--accent); }
-  .chip.tentative { border-style: dashed; color: var(--ink-2); background: transparent; }
-  .chip.tentative .meter b { background: var(--ink-3); }
-  .chip.enter { animation: rise 0.36s ease-out both; }
-  @keyframes rise { from { opacity: 0.15; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  @media (max-width: 480px) {
-    .tag-row { grid-template-columns: 1fr; gap: 6px; }
-    .tag-row > .eyebrow { padding-top: 0; }
-    .meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-  .legend-note { margin: 0; font-size: 12.5px; color: var(--ink-3); }
-
-  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-  .btn {
-    padding: 9px 16px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: var(--surface);
-    font-weight: 500;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .btn:hover { border-color: var(--ink-3); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn.primary:hover { filter: brightness(1.08); }
-  .btn:disabled { opacity: 0.55; cursor: progress; }
-  .toast { font: 12.5px/1 var(--mono); color: var(--ink-3); }
-
-  /* ---------- device ---------- */
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 20px 22px 22px;
-    display: grid;
-    gap: 18px;
-    min-width: 0;
-  }
-  .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
-  .model-line { font: 12.5px/1.4 var(--mono); color: var(--ink-3); }
-  .pipeline { display: grid; gap: 10px; }
-  .pipe-bar { display: flex; height: 12px; border-radius: 2px; overflow: hidden; gap: 2px; }
-  .pipe-bar span { display: block; height: 100%; min-width: 6px; }
-  .pipe-legend { display: flex; flex-wrap: wrap; gap: 6px 22px; font: 12.5px/1.3 var(--mono); color: var(--ink-2); }
-  .pipe-legend span { display: inline-flex; align-items: center; gap: 7px; }
-  .pipe-legend i { width: 10px; height: 10px; border-radius: 2px; }
-  .pipe-legend b { font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
-
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1px;
-    background: var(--line);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .stat { background: var(--surface); padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
-  .stat .v { font: 500 21px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
-  .stat .v small { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 3px; }
-  .stat .sub { font-size: 12.5px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
-  .mem { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 2px; }
-  .mem b { display: block; height: 100%; background: var(--accent); }
-  .mem.warn b { background: var(--warn); }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
-  .dot.warn { background: var(--warn); }
-  .dot.crit { background: var(--crit); }
-
-  /* ---------- log ---------- */
-  .log { list-style: none; margin: 0; padding: 0; display: grid; }
-  .log li + li { border-top: 1px solid var(--line); }
-  .log button {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
-    gap: 12px;
-    align-items: center;
-    text-align: left;
-    padding: 10px 8px;
-    background: none;
-    border: 0;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .log button:hover { background: var(--accent-soft); }
-  .log button[aria-current="true"] { background: var(--accent-soft); }
-  .log .thumb { width: 40px; height: 40px; border-radius: 3px; background: var(--plate); display: grid; place-items: center; overflow: hidden; }
-  .log .thumb svg, .log .thumb img { width: 80%; height: 80%; object-fit: contain; }
-  .log .t { font-size: 14px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .log .m { font: 11.5px/1.3 var(--mono); color: var(--ink-3); }
-  .log .time { font: 11.5px/1.3 var(--mono); color: var(--ink-3); text-align: right; white-space: nowrap; }
-
-  /* ---------- payload ---------- */
-  .payload {
-    margin: 0;
-    padding: 14px 16px;
-    background: var(--code-bg);
-    border-radius: 6px;
-    font: 12.5px/1.6 var(--mono);
-    color: var(--ink-2);
-    overflow: auto;
-    max-height: 420px;
-    white-space: pre;
-  }
-  .payload .k { color: var(--accent); cursor: help; border-radius: 2px; }
-  .payload .k:hover, .payload .k:focus-visible { background: var(--accent-soft); outline: none; }
-  .payload .s { color: var(--ink); }
-  .payload .n { color: var(--num); }
-  .payload .b { color: var(--num); font-style: italic; }
-  .hint { margin: 0; font-size: 13px; color: var(--ink-3); }
-  .is-bound { outline: 2px solid var(--accent) !important; outline-offset: 4px; border-radius: 4px; transition: outline-offset 0.15s; }
-
-  details { border-top: 1px solid var(--line); padding-top: 12px; }
-  summary { cursor: pointer; font-weight: 500; font-size: 14px; }
-  .test { display: grid; gap: 10px; margin-top: 12px; }
-  textarea {
-    width: 100%;
-    min-height: 140px;
-    resize: vertical;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: var(--ground);
-    color: var(--ink);
-    font: 12.5px/1.5 var(--mono);
-  }
-  .err { margin: 0; font: 12.5px/1.4 var(--mono); color: var(--crit); }
-
-  footer.notes {
-    border-top: 1px solid var(--line);
-    padding-top: 16px;
-    display: flex; flex-wrap: wrap; gap: 6px 24px;
-    font: 12px/1.5 var(--mono);
-    color: var(--ink-3);
-  }
-  footer.notes code { color: var(--ink-2); }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; }
-  }
-</style>
+<link rel="stylesheet" href="styles.css">
 
 </head>
 <body>
@@ -432,7 +25,7 @@
 
 <main class="wrap">
   <section class="grid" id="stage">
-    <figure>
+    <figure class="viewers">
       <div class="plate" data-bind="image">
         <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
         <span class="plate-id" id="plateId" data-bind="id">—</span>
@@ -440,14 +33,22 @@
         <div id="specimenHost"></div>
         <div class="scale"><i></i>5 cm</div>
       </div>
-      <figcaption>
-        <dl class="meta">
+      <div class="plate cam" id="camPlate" data-state="off">
+        <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
+        <span class="plate-id">WEBCAM</span>
+        <span class="plate-frame" id="camInfo">Off</span>
+        <video id="camVideo" autoplay muted playsinline></video>
+        <div class="cam-idle">
+          <p id="camMsg">Camera is off.</p>
+          <button class="btn primary" id="camBtn" type="button">Start webcam</button>
+        </div>
+      </div>
+    </figure>
+    <dl class="meta">
           <div data-bind="captured_at"><dt>Captured</dt><dd id="metaTime">—</dd></div>
           <div><dt>Camera</dt><dd>OV2640 · fixed focus</dd></div>
           <div data-bind="device"><dt>Unit</dt><dd id="metaUnit">—</dd></div>
         </dl>
-      </figcaption>
-    </figure>
 
     <article class="record" aria-live="polite">
       <div class="record-head">
@@ -455,11 +56,14 @@
         <span class="accession" id="accession" data-bind="id">—</span>
         <span class="gen-state" id="genState">Generated on-device</span>
       </div>
-      <h1 id="title" data-bind="title">—</h1>
-      <p class="summary" id="summary" data-bind="summary"></p>
-      <div class="ai-note">Title, summary and tags written by <em id="modelName">the on-board model</em>. Verify before cataloguing.</div>
+      <h1 id="title" data-bind="title" hidden>—</h1>
+      <div class="summary-card">
+        <span class="eyebrow">Analysis summary</span>
+        <p class="summary" id="summary" data-bind="summary"></p>
+        <div class="ai-note">Summary and tags written by <em id="modelName">the on-board model</em>. Verify before cataloguing.</div>
+      </div>
       <div class="tags" id="tags" data-bind="tags"></div>
-      <p class="legend-note">Bar and figure show model confidence (0–1). Dashed tags fall below 0.50 and are tentative.</p>
+      <p class="legend-note">Percentages show model confidence. Rows below 50% are tentative and shown hatched.</p>
       <div class="actions">
         <button class="btn primary" id="analyseBtn" type="button">Analyse again</button>
         <button class="btn" id="copyBtn" type="button">Copy record JSON</button>
@@ -519,6 +123,9 @@
   </footer>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="viewer3d.js"></script>
 <script>
 (() => {
   "use strict";
@@ -718,18 +325,37 @@
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
     });
     let i = 0;
-    $("tags").innerHTML = cats.map((c) => `
-      <div class="tag-row">
-        <span class="eyebrow">${esc(cap(c))}</span>
-        <div class="chips">${groups.get(c).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((t) => {
+    const scored = rec.tags.filter((t) => typeof t.score === "number");
+    const pct = (v) => Math.round(v * 100);
+    const mean = scored.length ? scored.reduce((a, t) => a + t.score, 0) / scored.length : null;
+    const hi = scored.filter((t) => t.score >= 0.8).length;
+    const lo = scored.filter((t) => t.score < 0.5).length;
+    const level = (v) => (v >= 0.8 ? "hi" : v >= 0.5 ? "mid" : "low");
+    const stats = scored.length ? `
+      <div class="stat-strip${animate ? " enter" : ""}">
+        <div class="stat big"><span class="eyebrow">Overall confidence</span><b>${pct(mean)}<small>%</small></b>
+          <span class="cbar ${level(mean)}"><i style="--s:${pct(mean)}%"></i></span></div>
+        <div class="stat"><span class="eyebrow">Tags</span><b>${rec.tags.length}</b><span class="sub">${cats.length} categories</span></div>
+        <div class="stat"><span class="eyebrow">High ≥ 80%</span><b>${hi}</b><span class="sub">${pct(hi / scored.length)}% of scored</span></div>
+        <div class="stat"><span class="eyebrow">Tentative &lt; 50%</span><b>${lo}</b><span class="sub">${lo ? "verify manually" : "none"}</span></div>
+      </div>` : "";
+    $("tags").innerHTML = stats + cats.map((c) => {
+      const list = groups.get(c).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+      const sc = list.filter((t) => typeof t.score === "number");
+      const avg = sc.length ? sc.reduce((a, t) => a + t.score, 0) / sc.length : null;
+      return `
+      <section class="cat">
+        <header><span class="eyebrow">${esc(cap(c))}</span>${avg === null ? "" : `<span class="avg" title="Average confidence">avg ${pct(avg)}%</span>`}</header>
+        <ul>${list.map((t) => {
           const has = typeof t.score === "number";
-          const tentative = has && t.score < 0.5;
           const delay = animate ? `animation-delay:${(i++) * 90}ms;` : "";
-          return `<span class="chip${tentative ? " tentative" : ""}${animate ? " enter" : ""}" style="${delay}--s:${has ? Math.round(t.score * 100) : 0}%">
-              <span>${esc(t.label)}</span>${has ? `<span class="sc">${t.score.toFixed(2)}</span><span class="meter"><b></b></span>` : ""}
-            </span>`;
-        }).join("")}</div>
-      </div>`).join("") || `<div class="tag-row"><span class="eyebrow">Tags</span><span class="hint">No tags returned.</span></div>`;
+          return `<li class="trow ${has ? level(t.score) : "none"}${animate ? " enter" : ""}" style="${delay}">
+              <span class="lbl">${esc(t.label)}</span>
+              ${has ? `<span class="pct">${pct(t.score)}%</span><span class="cbar ${level(t.score)}"><i style="--s:${pct(t.score)}%"></i></span>` : `<span class="pct">—</span>`}
+            </li>`;
+        }).join("")}</ul>
+      </section>`;
+    }).join("") || `<div class="cat"><header><span class="eyebrow">Tags</span></header><p class="hint">No tags returned.</p></div>`;
   }
 
   function renderDevice(rec) {
@@ -801,8 +427,18 @@
       </button></li>`).join("");
   }
 
+  /* Captured photo wins; otherwise an orbitable 3D model, or the SVG silhouette if WebGL/Three.js is unavailable. */
+  function showSpecimen(rec) {
+    const host = $("specimenHost");
+    if (!rec.image && window.Specimen3D?.available) {
+      try { window.Specimen3D.show(host, rec.glyph || "ding", rec.hue, rec.detail); return; }
+      catch (e) { console.warn("3D viewer unavailable, using 2D fallback", e); window.Specimen3D.available = false; }
+    }
+    host.innerHTML = visual(rec);
+  }
+
   function renderStatic(rec) {
-    $("specimenHost").innerHTML = visual(rec);
+    showSpecimen(rec);
     $("plateId").textContent = rec.id;
     $("accession").textContent = rec.id;
     $("metaTime").textContent = fmtTime(rec.captured_at);
@@ -965,7 +601,7 @@
     $("title").innerHTML = '<span class="caret"></span>';
     $("summary").textContent = "";
     $("tags").innerHTML = "";
-    $("specimenHost").innerHTML = specimenSVG(s.glyph, s.hue, s.detail);
+    showSpecimen({ glyph: s.glyph, hue: s.hue, detail: s.detail });
     document.getElementById("stage").classList.add("scanning");
     const stages = [["Capturing frame…", payload.stages.capture * 4], ["Vision encoder…", payload.stages.vision * 3]];
     for (const [label, ms] of stages) {
@@ -975,6 +611,44 @@
     document.getElementById("stage").classList.remove("scanning");
     ingest(payload, { stream: true, extra: s });
   });
+
+  /* ---------- webcam preview (needs https:// or http://localhost) ---------- */
+  const cam = { stream: null };
+  function camState(state, msg, info) {
+    $("camPlate").dataset.state = state;
+    if (msg) $("camMsg").textContent = msg;
+    $("camInfo").textContent = info || (state === "live" ? "Live" : "Off");
+    $("camBtn").textContent = state === "live" ? "Stop webcam" : "Start webcam";
+  }
+  function camStop() {
+    cam.stream?.getTracks().forEach((t) => t.stop());
+    cam.stream = null;
+    $("camVideo").srcObject = null;
+    camState("off", "Camera is off.");
+  }
+  async function camStart() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      camState("off", "Webcam needs a secure page: open via https:// or http://localhost.", "Unavailable");
+      return;
+    }
+    camState("starting", "Waiting for camera permission…", "Starting");
+    $("camBtn").disabled = true;
+    try {
+      cam.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
+      const v = $("camVideo");
+      v.srcObject = cam.stream;
+      const s = cam.stream.getVideoTracks()[0].getSettings();
+      camState("live", "", s.width && s.height ? `${s.width} × ${s.height}` : "Live");
+      cam.stream.getVideoTracks()[0].addEventListener("ended", camStop);
+    } catch (e) {
+      const denied = e && (e.name === "NotAllowedError" || e.name === "SecurityError");
+      camState("off", denied ? "Camera permission was blocked. Allow it in the browser's site settings and try again." : "No camera found or it is in use by another app.", "Error");
+    } finally {
+      $("camBtn").disabled = false;
+    }
+  }
+  $("camBtn").addEventListener("click", () => (cam.stream ? camStop() : camStart()));
+  window.addEventListener("pagehide", camStop);
 
   $("copyBtn").addEventListener("click", async () => {
     if (!state.current) return;
